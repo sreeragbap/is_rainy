@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { COORDINATE_PRECISION } from "@/config/app";
+import { z } from "zod";
 
 /**
  * A place a user can ask about.
@@ -10,15 +10,18 @@ import { COORDINATE_PRECISION } from "@/config/app";
  * database ids and makes list reconciliation trivial.
  */
 
-const factor = 10 ** COORDINATE_PRECISION;
-
-function round(value: number): number {
+function round(value: number, precision: number): number {
+  const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
 }
 
 /** Stable key for a place: rounded coordinates, ~1.1 km apart at 2dp. */
-export function placeKey(latitude: number, longitude: number): string {
-  return `${round(latitude).toFixed(COORDINATE_PRECISION)},${round(longitude).toFixed(COORDINATE_PRECISION)}`;
+export function placeKey(
+  latitude: number,
+  longitude: number,
+  precision: number = COORDINATE_PRECISION,
+): string {
+  return `${round(latitude, precision).toFixed(precision)},${round(longitude, precision).toFixed(precision)}`;
 }
 
 export const placeSchema = z.object({
@@ -34,13 +37,23 @@ export const placeSchema = z.object({
 
 export type Place = z.infer<typeof placeSchema>;
 
-/** Build a place with normalised coordinates and a derived id. */
-export function makePlace(input: Omit<Place, "id">): Place {
+/**
+ * Build a place with normalised coordinates and a derived id.
+ *
+ * City coordinates are deliberately coarse — two searches for the same city
+ * must produce one id. A device reading passes a finer precision instead: the
+ * user is standing at that point, and rounding it to the nearest kilometre can
+ * hand the forecast a different grid cell than the one they are in.
+ */
+export function makePlace(
+  input: Omit<Place, "id">,
+  precision: number = COORDINATE_PRECISION,
+): Place {
   return {
     ...input,
-    latitude: round(input.latitude),
-    longitude: round(input.longitude),
-    id: placeKey(input.latitude, input.longitude),
+    latitude: round(input.latitude, precision),
+    longitude: round(input.longitude, precision),
+    id: placeKey(input.latitude, input.longitude, precision),
   };
 }
 

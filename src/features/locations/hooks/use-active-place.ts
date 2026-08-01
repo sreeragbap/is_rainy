@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
+import { DEVICE_COORDINATE_PRECISION } from "@/config/app";
 import { apiPost } from "@/lib/api-client";
 import { readLocal, STORAGE_KEYS, writeLocal } from "@/lib/local-store";
 import { makePlace, placeSchema, type Place } from "../domain/place";
@@ -39,13 +40,16 @@ const storedSchema = z.object({
 
 /** Device coordinates are only ever this precise to the user: "here". */
 function devicePlace(latitude: number, longitude: number): Place {
-  return makePlace({
-    name: DEVICE_PLACE_NAME,
-    country: "",
-    admin: null,
-    latitude,
-    longitude,
-  });
+  return makePlace(
+    {
+      name: DEVICE_PLACE_NAME,
+      country: "",
+      admin: null,
+      latitude,
+      longitude,
+    },
+    DEVICE_COORDINATE_PRECISION,
+  );
 }
 
 export function isDevicePlace(place: Place): boolean {
@@ -91,7 +95,11 @@ export function useActivePlace(): ActivePlace {
         setPermission("denied");
         setResolving(false);
       },
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
+      // High accuracy because the request is always a deliberate tap now, and
+      // a coarse network fix can land in a different weather cell than the one
+      // the user is standing in. `maximumAge: 0` for the same reason: asking
+      // again should mean asking again, not replaying an old fix.
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 0 },
     );
   }, []);
 

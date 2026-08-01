@@ -29,6 +29,7 @@ describe("classifyConditions", () => {
     const cases: [number, string][] = [
       [0.05, "dry"],
       [RAIN_RATE_MM_PER_HOUR.trace, "drizzle"],
+      [0.9, "drizzle"],
       [2.4, "drizzle"],
       [RAIN_RATE_MM_PER_HOUR.moderate, "rain"],
       [7.5, "rain"],
@@ -43,10 +44,19 @@ describe("classifyConditions", () => {
     }
   });
 
-  it("trusts a light rate but lets the code separate rain from drizzle", () => {
-    expect(classifyConditions({ ...dry, precipitationMm: 1, weatherCode: 61 })).toBe("rain");
+  it("lets the measured rate outrank a slight-rain code", () => {
+    // The reported bug: Kochi at 2.4 mm/h under code 80 ("slight showers") was
+    // announced as "yes, it's raining" while it was visibly drizzling. Below
+    // the moderate boundary the rate decides.
+    expect(classifyConditions({ ...dry, precipitationMm: 2.4, weatherCode: 80 })).toBe("drizzle");
+    expect(classifyConditions({ ...dry, precipitationMm: 1, weatherCode: 61 })).toBe("drizzle");
+    expect(classifyConditions({ ...dry, precipitationMm: 0.2, weatherCode: 61 })).toBe("drizzle");
     expect(classifyConditions({ ...dry, precipitationMm: 1, weatherCode: 51 })).toBe("drizzle");
-    expect(classifyConditions({ ...dry, precipitationMm: 1, weatherCode: 80 })).toBe("rain");
+  });
+
+  it("lets a heavy code overrule a rate the aggregate flattened", () => {
+    expect(classifyConditions({ ...dry, precipitationMm: 0.3, weatherCode: 65 })).toBe("rain");
+    expect(classifyConditions({ ...dry, precipitationMm: 0.3, weatherCode: 82 })).toBe("rain");
   });
 
   it("still reports rain the gauge is too coarse to measure", () => {

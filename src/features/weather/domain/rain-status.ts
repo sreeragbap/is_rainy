@@ -11,9 +11,14 @@ import type { RainStatus, StatusTone } from "./types";
  */
 
 /**
- * Millimetres per hour. The light/moderate/heavy boundaries are the
- * conventional meteorological ones; 0.1 is the smallest rate a user would
- * describe as "it's spitting".
+ * Millimetres per hour. The moderate/heavy boundaries are the conventional
+ * meteorological ones; 0.1 is the smallest rate a user would describe as
+ * "it's spitting".
+ *
+ * `moderate` is also where this app draws the line between "drizzle" and
+ * "rain". These statuses are decisions, not meteorology: below 2.5 mm/h a
+ * person outside describes what they feel as drizzle, and saying "yes, it's
+ * raining" there overstates the answer.
  */
 export const RAIN_RATE_MM_PER_HOUR = {
   trace: 0.1,
@@ -90,9 +95,12 @@ export function classifyConditions({
     WMO.rain.has(weatherCode) || WMO.showers.has(weatherCode) || WMO.drizzle.has(weatherCode);
 
   if (rate >= RAIN_RATE_MM_PER_HOUR.trace) {
-    // Measurable but light. Trust the code to distinguish steady rain from a
-    // drizzle so "take an umbrella" is not shown for a passing mist.
-    return WMO.rain.has(weatherCode) || WMO.showers.has(weatherCode) ? "rain" : "drizzle";
+    // Measurable but under the moderate boundary. The measured rate decides,
+    // not the code: models routinely file a light hour under "slight rain"
+    // (61) or "slight showers" (80) while the person standing in it would say
+    // it is drizzling. Only a code for genuinely heavy conditions — which the
+    // rate can miss when a burst is averaged across the interval — escalates.
+    return HEAVY_CODES.has(weatherCode) ? "rain" : "drizzle";
   }
 
   // No measurable rate. Something can still be falling — codes describe

@@ -26,6 +26,13 @@ export const NOWCAST_HORIZON_MINUTES = 30;
 /** Coordinate precision used for cache keys and dedup: 2dp ≈ 1.1 km. */
 export const COORDINATE_PRECISION = 2;
 
+/**
+ * Precision kept for a device reading: 4dp ≈ 11 m. The user is standing at
+ * that point, so the forecast should be asked about it, not about the
+ * kilometre square it falls in.
+ */
+export const DEVICE_COORDINATE_PRECISION = 4;
+
 /** Upstream request timeout. Past this we prefer an error over a spinner. */
 export const UPSTREAM_TIMEOUT_MS = 6_000;
 
