@@ -2,7 +2,7 @@
   "name": "israiny",
   "version": "0.1.0",
   "private": true,
-  "description": "IsRainy \u2014 instantly know whether it's raining outside.",
+  "description": "IsRainy — instantly know whether it's raining outside.",
   "packageManager": "pnpm@10.4.1",
   "engines": {
     "node": ">=20"
@@ -36,6 +36,7 @@
     "lucide-react": "^0.525.0",
     "motion": "^12.15.0",
     "next": "^15.5.4",
+    "next-themes": "^0.4.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sonner": "^2.0.3",

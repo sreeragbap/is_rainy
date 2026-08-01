@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDownIcon, LocateFixedIcon, MapPinIcon, StarIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatPlace, type Place } from "../domain/place";
@@ -8,8 +9,8 @@ import { formatPlace, type Place } from "../domain/place";
 /**
  * The one row of chrome above the answer: where we are, and how to change it.
  *
- * Kept to three controls. Anything more would compete with the hero, and this
- * app has exactly one screen to get right.
+ * Kept to a handful of icon controls. Anything more would compete with the
+ * hero, and this app has exactly one screen to get right.
  */
 export function PlaceBar({
   place,
@@ -70,6 +71,8 @@ export function PlaceBar({
       >
         <LocateFixedIcon className="size-4" aria-hidden />
       </Button>
+
+      <ThemeToggle />
     </header>
   );
 }

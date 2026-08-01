@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
 /**
@@ -8,10 +9,13 @@ import { Toaster as Sonner } from "sonner";
  * a toast that disappears is the wrong place for the answer.
  */
 export function Toaster() {
+  // Follow the app's resolved theme, which may be a manual override of the OS.
+  const { resolvedTheme } = useTheme();
+
   return (
     <Sonner
       position="bottom-center"
-      theme="system"
+      theme={resolvedTheme === "dark" ? "dark" : "light"}
       toastOptions={{
         classNames: {
           toast:
