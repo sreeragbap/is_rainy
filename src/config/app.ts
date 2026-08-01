@@ -51,3 +51,13 @@ export const CLIENT_ID_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
  */
 export const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 export const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
+
+/**
+ * Nominatim, OpenStreetMap's geocoder — the active search provider (see the
+ * composition root in features/search/infrastructure/geocoder.ts). Key-free,
+ * but its usage policy requires an identifying User-Agent and at most one
+ * request per second — respected via the identifier below, the 24-hour server
+ * cache, and the client-side debounce.
+ */
+export const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+export const NOMINATIM_USER_AGENT = "IsRainy/1.0 (rain decision app; contact: basil@iocod.com)";

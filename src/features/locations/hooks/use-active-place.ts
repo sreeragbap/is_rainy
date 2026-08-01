@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { apiPost } from "@/lib/api-client";
 import { readLocal, STORAGE_KEYS, writeLocal } from "@/lib/local-store";
@@ -9,16 +9,23 @@ import { makePlace, placeSchema, type Place } from "../domain/place";
 /**
  * Which place the app is currently answering for.
  *
- * Resolution order is chosen to reach an answer in as few seconds as possible:
+ * The product's default subject is "here": the question on the door of the
+ * building you are standing in. So the current location is preselected whenever
+ * it can be had without nagging, and searched places exist for switching away.
  *
- *  1. The place the user last looked at, restored from localStorage. Instant,
- *     and correct for the overwhelmingly common case of reopening the app in the
- *     same building.
- *  2. Otherwise the device's coordinates, which need a permission prompt.
- *  3. Otherwise nothing, and the UI asks for a city.
+ * Resolution order on open:
  *
- * Geolocation is only requested when there is no stored place, so returning
- * users are never prompted again.
+ *  1. The last viewed place from localStorage, shown immediately — an instant
+ *     answer beats a spinner while the GPS warms up.
+ *  2. If location permission is already granted, the device's current
+ *     coordinates replace it silently. No prompt, and the user may have moved
+ *     since last time.
+ *  3. With no stored place at all, the device is asked (one permission prompt,
+ *     first visit only).
+ *  4. Otherwise nothing, and the UI asks for a city.
+ *
+ * Anything the user does by hand — searching a city, tapping the locate
+ * button — always wins over the automatic steps.
  */
 
 export const DEVICE_PLACE_NAME = "Your location";
@@ -64,46 +71,77 @@ export function useActivePlace(): ActivePlace {
   const [permission, setPermission] = useState<LocationPermissionState>("idle");
   const [resolving, setResolving] = useState(true);
 
-  const requestDeviceLocation = useCallback(() => {
+  // Set the moment the user picks a place by hand this session, so a slow
+  // automatic location fix arriving afterwards cannot yank the screen away
+  // from what they explicitly asked for.
+  const userChoseThisSession = useRef(false);
+
+  const requestDeviceLocation = useCallback((options?: { auto?: boolean }) => {
+    const auto = options?.auto === true;
+
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setPermission("unsupported");
       setResolving(false);
       return;
     }
 
-    setPermission("requesting");
+    if (!auto) setPermission("requesting");
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (auto && userChoseThisSession.current) return;
+
         const next = devicePlace(position.coords.latitude, position.coords.longitude);
         setPlace(next);
         setSource("device");
         setPermission("granted");
         setResolving(false);
-        // Remembered so a reload does not re-prompt, but not recorded as a
-        // recent search: the user never asked for this place by name.
+        // Remembered so a reload shows something instantly, but not recorded
+        // as a recent search: the user never asked for this place by name.
         writeLocal(STORAGE_KEYS.selectedPlace, { place: next, source: "device" });
       },
-      () => {
-        setPermission("denied");
+      (error) => {
+        // A silent refresh must not tear down what is already on screen: only
+        // an actual permission revocation is recorded. A timeout or a missing
+        // GPS fix keeps the stored place and stays quiet.
+        if (!auto || error.code === error.PERMISSION_DENIED) setPermission("denied");
         setResolving(false);
       },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60_000 },
     );
   }, []);
 
-  // Runs once: restore, or fall back to asking the device where we are.
+  // Runs once: restore instantly, then prefer the current location when it is
+  // available without a prompt.
   useEffect(() => {
     const stored = readLocal(STORAGE_KEYS.selectedPlace, storedSchema);
     if (stored) {
       setPlace(stored.place);
       setSource(stored.source);
       setResolving(false);
+    } else {
+      // First visit: worth one permission prompt to answer for "here".
+      requestDeviceLocation();
       return;
     }
-    requestDeviceLocation();
+
+    // Silently upgrade to the current location — but never prompt a returning
+    // user. The Permissions API says whether access is already granted; where
+    // it is unavailable, a previously stored device place implies the same.
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((status) => {
+          if (status.state === "granted") requestDeviceLocation({ auto: true });
+        })
+        .catch(() => {});
+    } else if (stored.source === "device") {
+      requestDeviceLocation({ auto: true });
+    }
   }, [requestDeviceLocation]);
 
   const select = useCallback((next: Place) => {
+    userChoseThisSession.current = true;
     setPlace(next);
     setSource("chosen");
     setResolving(false);

@@ -23,6 +23,8 @@ interface FetchJsonOptions<T> {
   /** Upstream payloads are validated, never trusted by shape assertion. */
   schema: ZodType<T>;
   timeoutMs?: number;
+  /** Extra request headers, e.g. the identifying User-Agent Nominatim requires. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -33,13 +35,13 @@ interface FetchJsonOptions<T> {
  * rendering somewhere in the UI.
  */
 export async function fetchJson<T>(url: string, options: FetchJsonOptions<T>): Promise<T> {
-  const { revalidateSeconds, schema, timeoutMs = UPSTREAM_TIMEOUT_MS } = options;
+  const { revalidateSeconds, schema, timeoutMs = UPSTREAM_TIMEOUT_MS, headers } = options;
 
   let response: Response;
   try {
     response = await fetch(url, {
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...headers },
       ...(revalidateSeconds > 0
         ? { next: { revalidate: revalidateSeconds } }
         : { cache: "no-store" as const }),
