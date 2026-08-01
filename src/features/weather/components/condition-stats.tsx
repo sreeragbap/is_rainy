@@ -1,3 +1,4 @@
+import { ShimmerOverlay } from "@/components/ui/shimmer-overlay";
 import { DropletsIcon, ThermometerIcon, UmbrellaIcon, WindIcon } from "lucide-react";
 import { RAIN_RATE_MM_PER_HOUR } from "../domain/rain-status";
 import type { WeatherSnapshot } from "../domain/types";
@@ -55,21 +56,29 @@ function buildStats(snapshot: WeatherSnapshot): Stat[] {
   ];
 }
 
-export function ConditionStats({ snapshot }: { snapshot: WeatherSnapshot }) {
+export function ConditionStats({
+  snapshot,
+  shimmer = false,
+}: {
+  snapshot: WeatherSnapshot;
+  /** Mirrors the hero card's sweep so the whole answer refreshes as one. */
+  shimmer?: boolean;
+}) {
   return (
     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
       {buildStats(snapshot).map(({ icon: Icon, label, value, detail }) => (
         <div
           key={label}
-          className="flex flex-col gap-1 rounded-2xl border bg-card/55 px-4 py-3 backdrop-blur-xl"
+          className="relative flex min-w-0 flex-col gap-1 rounded-2xl border bg-card/55 px-3 py-3 backdrop-blur-xl sm:px-4"
         >
-          <dt className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Icon className="size-3.5" aria-hidden />
-            {label}
+          <ShimmerOverlay active={shimmer} />
+          <dt className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Icon className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">{label}</span>
           </dt>
-          <dd className="flex items-baseline gap-1.5">
+          <dd className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
             <span className="text-xl font-semibold tracking-tight tabular-nums">{value}</span>
-            {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
+            {detail && <span className="truncate text-xs text-muted-foreground">{detail}</span>}
           </dd>
         </div>
       ))}

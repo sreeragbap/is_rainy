@@ -36,7 +36,9 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-[15dvh] left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bg-popover",
+          // Higher on phones: the on-screen keyboard claims the lower half,
+          // and dvh does not shrink for it.
+          "fixed top-[8dvh] left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 bg-popover sm:top-[15dvh]",
           "rounded-2xl border shadow-2xl shadow-black/10",
           "data-[state=closed]:animate-out data-[state=open]:animate-in",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

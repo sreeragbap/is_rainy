@@ -1,9 +1,10 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
 import { InsightLine } from "@/features/insight/components/insight-line";
 import type { Insight } from "@/features/insight/domain/types";
+import { ShimmerOverlay } from "@/components/ui/shimmer-overlay";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "motion/react";
 import { statusCopy } from "../domain/status-copy";
 import type { RainStatus, StatusTone } from "../domain/types";
 import { toneStyle } from "./status-tone";
@@ -19,12 +20,15 @@ export function StatusCard({
   tone,
   insight,
   muted = false,
+  shimmer = false,
 }: {
   status: RainStatus;
   tone: StatusTone;
   insight: Insight;
   /** Dimmed while showing an answer we know is no longer current. */
   muted?: boolean;
+  /** A light sweep across the card while fresher data is being fetched. */
+  shimmer?: boolean;
 }) {
   const copy = statusCopy(status);
   const styles = toneStyle(tone);
@@ -34,7 +38,7 @@ export function StatusCard({
       aria-live="polite"
       aria-atomic="true"
       className={cn(
-        "relative flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden rounded-[2rem] border bg-card/55 px-6 py-12 text-center shadow-xl shadow-black/[0.04] backdrop-blur-xl transition-opacity duration-500",
+        "relative flex flex-1 flex-col items-center justify-center gap-5 overflow-hidden rounded-[2rem] border bg-card/55 px-5 py-8 text-center shadow-xl shadow-black/[0.04] backdrop-blur-xl transition-opacity duration-500 sm:gap-6 sm:px-6 sm:py-12",
         styles.border,
         muted && "opacity-70",
       )}
@@ -47,6 +51,8 @@ export function StatusCard({
           styles.blob,
         )}
       />
+
+      <ShimmerOverlay active={shimmer} />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

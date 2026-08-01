@@ -29,6 +29,26 @@ export function WeatherScreen() {
 
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // The card itself is the refresh indicator: whenever fresher data is on its
+  // way — the refresh button, the 60-second interval, a new GPS fix — light
+  // sweeps across it. Most fetches finish in milliseconds, so the sweep is
+  // held for one full pass; anything slower keeps it running via `busy`.
+  const busy = isRefreshing || permission === "requesting";
+  const [sweep, setSweep] = useState(false);
+  const sweepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!busy) return;
+    setSweep(true);
+    if (sweepTimer.current !== null) clearTimeout(sweepTimer.current);
+    sweepTimer.current = setTimeout(() => setSweep(false), 1_800);
+  }, [busy]);
+  useEffect(
+    () => () => {
+      if (sweepTimer.current !== null) clearTimeout(sweepTimer.current);
+    },
+    [],
+  );
+
   // ⌘K / Ctrl+K opens search — free for anyone on a keyboard, invisible to
   // everyone else.
   useEffect(() => {
@@ -57,7 +77,12 @@ export function WeatherScreen() {
   const deviceLocation = place !== null && isDevicePlace(place);
 
   return (
-    <main className="relative flex min-h-dvh flex-col overflow-hidden px-4 pt-4 pb-6 sm:px-6 sm:pb-8">
+    <main
+      // The viewport extends under notches and the home indicator
+      // (viewport-fit=cover), so every edge keeps its base padding or the
+      // device's safe-area inset, whichever is larger.
+      className="relative flex min-h-dvh flex-col overflow-hidden pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pl-[max(1.5rem,env(safe-area-inset-left))]"
+    >
       {/* Background responds to the answer, so the screen reads correctly before
           a single word is processed. */}
       <div
@@ -93,8 +118,9 @@ export function WeatherScreen() {
               tone={answer.snapshot.tone}
               insight={answer.insight}
               muted={isFromCache}
+              shimmer={sweep || busy}
             />
-            <ConditionStats snapshot={answer.snapshot} />
+            <ConditionStats snapshot={answer.snapshot} shimmer={sweep || busy} />
             <LastUpdated
               fetchedAt={answer.fetchedAt}
               isRefreshing={isRefreshing}

@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 
 const CARD =
-  "bg-card/55 flex flex-1 flex-col items-center justify-center gap-6 rounded-[2rem] border px-6 py-12 text-center shadow-xl shadow-black/[0.04] backdrop-blur-xl";
+  "bg-card/55 flex flex-1 flex-col items-center justify-center gap-5 rounded-[2rem] border px-5 py-8 text-center shadow-xl shadow-black/[0.04] backdrop-blur-xl sm:gap-6 sm:px-6 sm:py-12";
 
 /** Shown only on a genuine first load, where there is nothing cached to show. */
 export function AnswerSkeleton() {
