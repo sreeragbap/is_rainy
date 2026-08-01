@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { statusCopy } from "../domain/status-copy";
 import type { RainStatus, StatusTone } from "../domain/types";
+import { StatusAnimation } from "./status-animation";
 import { toneStyle } from "./status-tone";
 
 /**
@@ -52,6 +53,22 @@ export function StatusCard({
         )}
       />
 
+      {/* Ambient weather behind the words. Crossfaded on status change so the
+          sky shifts rather than reloads. */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={status}
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8 }}
+          className={cn("pointer-events-none absolute inset-0", styles.accent)}
+        >
+          <StatusAnimation status={status} />
+        </motion.div>
+      </AnimatePresence>
+
       <ShimmerOverlay active={shimmer} />
 
       <AnimatePresence mode="wait" initial={false}>
@@ -63,7 +80,11 @@ export function StatusCard({
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className="relative flex flex-col items-center gap-5"
         >
-          <span className="text-6xl leading-none sm:text-7xl" role="img" aria-label={copy.label}>
+          <span
+            className="animate-float text-6xl leading-none sm:text-7xl"
+            role="img"
+            aria-label={copy.label}
+          >
             {copy.glyph}
           </span>
 
