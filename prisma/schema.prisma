@@ -1,0 +1,69 @@
+// IsRainy — persistence layer.
+//
+// Users are anonymous: a stable `clientId` (UUID minted client-side and kept in
+// a first-party cookie) scopes recent searches and favourites without
+// requiring an account. Weather data itself is never persisted here — it is
+// fetched live from Open-Meteo and cached server-side; the database only
+// stores what the user has expressed intent about: places.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Supabase pgBouncer, port 6543) for the app runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection (port 5432) so `prisma migrate` can run DDL.
+  directUrl = env("DIRECT_URL")
+}
+
+/// A geocoded place, deduplicated by coordinates so searches and favourites
+/// converge on a single canonical row per location.
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  country   String   @db.VarChar(2)
+  state     String?
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  searches  SearchHistory[]
+  favorites FavoriteLocation[]
+
+  @@unique([latitude, longitude])
+  @@index([name])
+  @@map("locations")
+}
+
+/// One row per (client, place). Searching the same place again moves it back to
+/// the top rather than adding a duplicate, so recents read as a simple
+/// descending scan and the table stays bounded per client.
+model SearchHistory {
+  id         String   @id @default(cuid())
+  clientId   String   @map("client_id") @db.Uuid
+  locationId String   @map("location_id")
+  searchedAt DateTime @default(now()) @map("searched_at")
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, locationId])
+  @@index([clientId, searchedAt(sort: Desc)])
+  @@map("search_history")
+}
+
+/// A location the client pinned. Unique per (client, location) so favouriting
+/// is idempotent.
+model FavoriteLocation {
+  id         String   @id @default(cuid())
+  clientId   String   @map("client_id") @db.Uuid
+  locationId String   @map("location_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, locationId])
+  @@index([clientId])
+  @@map("favorite_locations")
+}
