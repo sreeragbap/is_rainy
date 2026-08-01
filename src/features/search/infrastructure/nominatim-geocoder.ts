@@ -1,6 +1,9 @@
 import { z } from "zod";
 import {
+  DEVICE_COORDINATE_PRECISION,
   GEOCODING_CACHE_TTL_SECONDS,
+  NOMINATIM_REVERSE_URL,
+  NOMINATIM_REVERSE_ZOOM,
   NOMINATIM_SEARCH_URL,
   NOMINATIM_USER_AGENT,
 } from "@/config/app";
@@ -29,12 +32,56 @@ const resultSchema = z.object({
       state: z.string().optional(),
       province: z.string().optional(),
       county: z.string().optional(),
+      // Settlement fields, most specific first. Which one is populated depends
+      // on how the place is classified in OSM, not on how large it is.
+      village: z.string().optional(),
+      hamlet: z.string().optional(),
+      town: z.string().optional(),
+      municipality: z.string().optional(),
+      city: z.string().optional(),
     })
     .optional(),
 });
 
 /** A bare array — no envelope object, unlike Open-Meteo. */
 const responseSchema = z.array(resultSchema);
+
+/**
+ * Reverse returns a single object, and answers "nothing here" with an `error`
+ * field rather than an HTTP status — mid-ocean coordinates, typically.
+ */
+const reverseResponseSchema = z.union([
+  resultSchema.partial({ name: true }),
+  z.object({ error: z.string() }),
+]);
+
+type ReverseHit = Extract<z.infer<typeof reverseResponseSchema>, { display_name: string }>;
+
+/**
+ * The settlement name for a reverse hit.
+ *
+ * Read from the address hierarchy, most specific first, because the record's
+ * own `name` describes whatever feature happened to match: in a village it is
+ * the village, but in a city it is a suburb — "Valummel" rather than "Kochi".
+ * The hierarchy answers the question the user is actually asking, which is
+ * what they would say if someone asked where they are.
+ *
+ * `name` is the fallback for places whose address carries no settlement at all,
+ * and `display_name` for the rare record with neither.
+ */
+function settlementName(result: ReverseHit): string | null {
+  const address = result.address;
+  const candidate =
+    address?.village ??
+    address?.town ??
+    address?.municipality ??
+    address?.city ??
+    address?.hamlet ??
+    result.name?.trim() ??
+    result.display_name.split(",")[0];
+
+  return candidate?.trim() || null;
+}
 
 /** State-level context, whichever field this country's OSM data uses. */
 function adminOf(address: z.infer<typeof resultSchema>["address"]): string | null {
@@ -90,5 +137,41 @@ export class NominatimGeocoder implements GeocodingProvider {
       seenLabels.add(label);
       return true;
     });
+  }
+
+  async reverse(latitude: number, longitude: number): Promise<Place | null> {
+    const url = new URL(NOMINATIM_REVERSE_URL);
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("zoom", String(NOMINATIM_REVERSE_ZOOM));
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("accept-language", "en");
+
+    const response = await fetchJson(url.toString(), {
+      schema: reverseResponseSchema,
+      revalidateSeconds: GEOCODING_CACHE_TTL_SECONDS,
+      headers: { "User-Agent": NOMINATIM_USER_AGENT },
+    });
+
+    if ("error" in response) return null;
+
+    const name = settlementName(response);
+    if (!name) return null;
+
+    // Built on the coordinates asked about, not the ones Nominatim answers
+    // with — the user is standing here; the settlement is only its label — and
+    // kept at full device precision, because this exact point is the thing
+    // worth remembering.
+    return makePlace(
+      {
+        name,
+        country: response.address?.country_code?.slice(0, 2).toUpperCase() ?? "",
+        admin: adminOf(response.address),
+        latitude,
+        longitude,
+      },
+      DEVICE_COORDINATE_PRECISION,
+    );
   }
 }

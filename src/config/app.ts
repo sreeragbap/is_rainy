@@ -67,4 +67,17 @@ export const OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1
  * cache, and the client-side debounce.
  */
 export const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+export const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+
+/**
+ * Zoom level for reverse lookups.
+ *
+ * 13 is Nominatim's village/suburb level, and it is the coarsest zoom whose
+ * response still carries a `village` field. Zoom 10 answers with the
+ * administrative county — "Chavakkad" for someone standing in Vadakkekad —
+ * while 14 and finer drop to hamlets and neighbourhoods nobody would use to
+ * name where they are. In a city this returns a suburb, so the settlement is
+ * read from the address hierarchy rather than the headline name.
+ */
+export const NOMINATIM_REVERSE_ZOOM = 13;
 export const NOMINATIM_USER_AGENT = "IsRainy/1.0 (rain decision app; contact: basil@iocod.com)";

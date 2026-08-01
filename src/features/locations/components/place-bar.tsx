@@ -16,6 +16,7 @@ export function PlaceBar({
   place,
   isDeviceLocation,
   isFavorite,
+  isSavingFavorite = false,
   onOpenSearch,
   onToggleFavorite,
   onUseDeviceLocation,
@@ -23,6 +24,8 @@ export function PlaceBar({
   place: Place | null;
   isDeviceLocation: boolean;
   isFavorite: boolean;
+  /** Naming a device reading takes a round trip; the star waits for it. */
+  isSavingFavorite?: boolean;
   onOpenSearch: () => void;
   onToggleFavorite: () => void;
   onUseDeviceLocation: () => void;
@@ -41,16 +44,19 @@ export function PlaceBar({
         <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
 
-      {/* A device reading has no name worth saving, so the star only appears
-          once the user has picked an actual city. */}
-      {place && !isDeviceLocation && (
+      {/* A device reading is saveable too: the place it sits in is named on the
+          way to the favourites list, so "here" becomes somewhere. */}
+      {place && (
         <Button
           variant="outline"
           size="icon"
           onClick={onToggleFavorite}
+          disabled={isSavingFavorite}
           aria-pressed={isFavorite}
           aria-label={
-            isFavorite ? `Remove ${place.name} from favourites` : `Add ${place.name} to favourites`
+            isFavorite
+              ? `Remove ${isDeviceLocation ? "your location" : place.name} from favourites`
+              : `Add ${isDeviceLocation ? "your location" : place.name} to favourites`
           }
         >
           <StarIcon

@@ -56,4 +56,13 @@ export class OpenMeteoGeocoder implements GeocodingProvider {
       (place, index) => places.findIndex((other) => other.id === place.id) === index,
     );
   }
+
+  /**
+   * Open-Meteo's geocoding API searches by name only — it has no reverse
+   * endpoint — so this provider cannot name a coordinate. Callers treat null
+   * as "unavailable" rather than "nowhere".
+   */
+  async reverse(): Promise<Place | null> {
+    return null;
+  }
 }

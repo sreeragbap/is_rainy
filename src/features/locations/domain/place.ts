@@ -15,13 +15,19 @@ function round(value: number, precision: number): number {
   return Math.round(value * factor) / factor;
 }
 
-/** Stable key for a place: rounded coordinates, ~1.1 km apart at 2dp. */
+/**
+ * Stable key for a place: rounded coordinates, ~1.1 km apart at 2dp.
+ *
+ * Written unpadded, so a coordinate carries the same key whatever ceiling it
+ * was normalised under — 9.93 is "9.93" whether it was rounded to two decimals
+ * or to four. Only genuinely finer coordinates produce a longer key.
+ */
 export function placeKey(
   latitude: number,
   longitude: number,
   precision: number = COORDINATE_PRECISION,
 ): string {
-  return `${round(latitude, precision).toFixed(precision)},${round(longitude, precision).toFixed(precision)}`;
+  return `${round(latitude, precision)},${round(longitude, precision)}`;
 }
 
 export const placeSchema = z.object({
@@ -55,6 +61,18 @@ export function makePlace(
     longitude: round(input.longitude, precision),
     id: placeKey(input.latitude, input.longitude, precision),
   };
+}
+
+/**
+ * The key two places share when they are the same place.
+ *
+ * A device reading keeps more decimals than a searched city, and the database
+ * stores everything at the coarse precision, so raw ids from those three
+ * sources never match even when they describe one spot. Comparing at the
+ * coarse precision is what makes "is this place a favourite?" answerable.
+ */
+export function sameKey(place: Place): string {
+  return placeKey(place.latitude, place.longitude);
 }
 
 /** How a place reads in one line: "Kochi, Kerala, IN". */

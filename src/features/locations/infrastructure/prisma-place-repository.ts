@@ -1,4 +1,5 @@
 import type { Location, PrismaClient } from "@prisma/client";
+import { DEVICE_COORDINATE_PRECISION } from "@/config/app";
 import { getPrisma } from "@/lib/db";
 import { FavoritesLimitError, makePlace, type Place } from "../domain/place";
 import type { PlaceRepository } from "../domain/place-repository";
@@ -11,14 +12,22 @@ import type { PlaceRepository } from "../domain/place-repository";
  * client id.
  */
 
+/**
+ * Stored coordinates are already normalised, so reading them back must not
+ * round again: a favourite saved from a device reading would otherwise lose its
+ * precision on the way out and stop matching the place it was saved from.
+ */
 function toPlace(location: Location): Place {
-  return makePlace({
-    name: location.name,
-    country: location.country,
-    admin: location.state,
-    latitude: location.latitude,
-    longitude: location.longitude,
-  });
+  return makePlace(
+    {
+      name: location.name,
+      country: location.country,
+      admin: location.state,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    },
+    DEVICE_COORDINATE_PRECISION,
+  );
 }
 
 /**

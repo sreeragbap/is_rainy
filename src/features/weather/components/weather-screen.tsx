@@ -24,7 +24,7 @@ import { toneStyle } from "./status-tone";
  */
 export function WeatherScreen() {
   const { place, permission, resolving, select, requestDeviceLocation } = useActivePlace();
-  const { recent, favorites, isFavorite, toggleFavorite } = useSavedPlaces();
+  const { recent, favorites, isFavorite, toggleFavorite, isSaving } = useSavedPlaces();
   const { answer, isFromCache, isLoading, isRefreshing, error, refresh } = useWeatherAnswer(place);
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -98,8 +98,11 @@ export function WeatherScreen() {
           place={place}
           isDeviceLocation={deviceLocation}
           isFavorite={place !== null && isFavorite(place)}
+          isSavingFavorite={isSaving}
           onOpenSearch={() => setSearchOpen(true)}
-          onToggleFavorite={() => place && toggleFavorite(place)}
+          // A device reading has coordinates but no name; the server resolves
+          // one as part of the same request.
+          onToggleFavorite={() => place && toggleFavorite(place, { resolveName: deviceLocation })}
           onUseDeviceLocation={requestDeviceLocation}
         />
 
